@@ -11,6 +11,7 @@ using System;
 using NSubstitute;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.Options;
+using Swashbuckle.AspNetCore.Filters.Test.TestFixtures.Examples;
 
 namespace Swashbuckle.AspNetCore.Filters.Test.Examples
 {
@@ -205,6 +206,25 @@ namespace Swashbuckle.AspNetCore.Filters.Test.Examples
             // Assert
             var actualParameterExample = Enum.Parse(typeof(Title), titleParameter.Schema.Example.ToString());
             var expectedExample = new TitleExample().GetExamples().Value;
+            actualParameterExample.ShouldBe(expectedExample);
+        }
+
+        [Fact]
+        public void Apply_WhenRequestIsANullableGuid_ShouldNotThrowException()
+        {
+            // Arrange
+            serviceProvider.GetService(typeof(IExamplesProvider<Guid?>)).Returns(new GuidExample());
+            var customerParameter = new BodyParameter { In = "body", Schema = new Schema { Ref = "#/definitions/CustomerId" } };
+            var operation = new Operation { OperationId = "foobar", Parameters = new[] { customerParameter } };
+            var parameterDescriptions = new List<ApiParameterDescription>() { new ApiParameterDescription { Type = typeof(Nullable<Guid>), Name = "customerId" } };
+            var filterContext = FilterContextFor(typeof(FakeActions), nameof(FakeActions.RequestTakesANullableGuid), parameterDescriptions);
+
+            // Act
+            sut.Apply(operation, filterContext);
+
+            // Assert
+            var actualParameterExample = Guid.Parse(customerParameter.Schema.Example.ToString());
+            var expectedExample = new GuidExample().GetExamples().Value;
             actualParameterExample.ShouldBe(expectedExample);
         }
 

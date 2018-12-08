@@ -118,6 +118,11 @@ namespace Swashbuckle.AspNetCore.Filters.Test.TestFixtures.Fakes
             throw new NotImplementedException();
         }
 
+        public IActionResult RequestTakesANullableGuid([FromBody]Guid? customerId)
+        {
+            throw new NotImplementedException();
+        }
+
         public IActionResult None()
         {
             throw new NotImplementedException();

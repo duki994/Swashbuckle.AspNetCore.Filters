@@ -15,7 +15,7 @@ using Swashbuckle.AspNetCore.Filters.Test.TestFixtures.Examples;
 
 namespace Swashbuckle.AspNetCore.Filters.Test.Examples
 {
-    public class ServiceProviderExamplesOperationFilterTests : BaseOperationFilterTests
+    public partial class ServiceProviderExamplesOperationFilterTests : BaseOperationFilterTests
     {
         private readonly IOperationFilter sut;
         private readonly IServiceProvider serviceProvider;
@@ -209,14 +209,13 @@ namespace Swashbuckle.AspNetCore.Filters.Test.Examples
             actualParameterExample.ShouldBe(expectedExample);
         }
 
-        private class GenericExampleProvider<T> : IExamplesProvider<T>
+        private class GenericExampleProvider<T> : IExamplesProvider<T> where T : class
         {
-            public const string Blah = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
             public T GetExamples()
             {
-                if (typeof(T) == typeof(Guid?))
+                if (typeof(T) == typeof(PersonRequest))
                 {
-                    return (T)(object)new Guid(Blah);
+                    return (T)(object)new PersonRequest { FirstName = "Steve" };
                 }
 
                 return default(T);
@@ -227,19 +226,18 @@ namespace Swashbuckle.AspNetCore.Filters.Test.Examples
         public void Apply_WhenExampleProviderIsGenericAndRequestIsANullableGuid_ShouldNotThrowException()
         {
             // Arrange
-            serviceProvider.GetService(typeof(IExamplesProvider<Guid?>)).Returns(new GenericExampleProvider<Guid?>());
-            var customerParameter = new BodyParameter { In = "body", Schema = new Schema { Ref = "#/definitions/CustomerId" } };
-            var operation = new Operation { OperationId = "foobar", Parameters = new[] { customerParameter } };
-            var parameterDescriptions = new List<ApiParameterDescription>() { new ApiParameterDescription { Type = typeof(Nullable<Guid>), Name = "customerId" } };
-            var filterContext = FilterContextFor(typeof(FakeActions), nameof(FakeActions.RequestTakesANullableGuid), parameterDescriptions);
+            serviceProvider.GetService(typeof(IExamplesProvider<PersonRequest>)).Returns(new GenericExampleProvider<PersonRequest>());
+            var personRequestParameter = new BodyParameter { In = "body", Schema = new Schema { Ref = "#/definitions/PersonRequest" } };
+            var operation = new Operation { OperationId = "foobar", Parameters = new[] { personRequestParameter } };
+            var parameterDescriptions = new List<ApiParameterDescription>() { new ApiParameterDescription { Type = typeof(PersonRequest) } };
+            var filterContext = FilterContextFor(typeof(FakeActions), nameof(FakeActions.PersonRequestUnannotated), parameterDescriptions);
 
             // Act
             sut.Apply(operation, filterContext);
 
             // Assert
-            var actualParameterExample = customerParameter.Schema.Example.ToString();
-            var expectedExample = GenericExampleProvider<Guid?>.Blah;
-            actualParameterExample.ShouldBe(expectedExample);
+            var actualSchemaExample = (JObject)filterContext.SchemaRegistry.Definitions["PersonRequest"].Example;
+            actualSchemaExample["firstName"].ShouldBe("Steve");
         }
 
         [Fact]

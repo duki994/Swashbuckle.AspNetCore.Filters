@@ -209,11 +209,25 @@ namespace Swashbuckle.AspNetCore.Filters.Test.Examples
             actualParameterExample.ShouldBe(expectedExample);
         }
 
+        private class GenericExampleProvider<T> : IExamplesProvider<T>
+        {
+            public const string Blah = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+            public T GetExamples()
+            {
+                if (typeof(T) == typeof(Guid?))
+                {
+                    return (T)(object)new Guid(Blah);
+                }
+
+                return default(T);
+            }
+        }
+
         [Fact]
-        public void Apply_WhenRequestIsANullableGuid_ShouldNotThrowException()
+        public void Apply_WhenExampleProviderIsGenericAndRequestIsANullableGuid_ShouldNotThrowException()
         {
             // Arrange
-            serviceProvider.GetService(typeof(IExamplesProvider<Guid?>)).Returns(new GuidExample());
+            serviceProvider.GetService(typeof(IExamplesProvider<Guid?>)).Returns(new GenericExampleProvider<Guid?>());
             var customerParameter = new BodyParameter { In = "body", Schema = new Schema { Ref = "#/definitions/CustomerId" } };
             var operation = new Operation { OperationId = "foobar", Parameters = new[] { customerParameter } };
             var parameterDescriptions = new List<ApiParameterDescription>() { new ApiParameterDescription { Type = typeof(Nullable<Guid>), Name = "customerId" } };
@@ -223,8 +237,8 @@ namespace Swashbuckle.AspNetCore.Filters.Test.Examples
             sut.Apply(operation, filterContext);
 
             // Assert
-            var actualParameterExample = Guid.Parse(customerParameter.Schema.Example.ToString());
-            var expectedExample = new GuidExample().GetExamples().Value;
+            var actualParameterExample = customerParameter.Schema.Example.ToString();
+            var expectedExample = GenericExampleProvider<Guid?>.Blah;
             actualParameterExample.ShouldBe(expectedExample);
         }
 
